@@ -11,7 +11,7 @@ services:
       - postgres_data:/var/lib/postgresql/data
 
   axum:
-    image: ghcr.io/frederictaillandier/grimoire:latest
+    image: ghcr.io/frederictaillandier/grimoire:nightly
     environment:
       DATABASE_URL: postgres://${GRIMOIRE_POSTGRES_USER}:${GRIMOIRE_POSTGRES_PASSWORD}@postgres:5432/grimoire
       RUST_LOG: info

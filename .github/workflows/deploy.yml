@@ -1,0 +1,33 @@
+name: Deploy Grimoire
+permissions:
+  packages: write
+  contents: read
+on:
+  push:
+    branches:
+      - main # Triggers only when you push to this branch
+  workflow_dispatch: # Enables manual trigger
+
+jobs:
+  push-to-registry:
+    runs-on: ubuntu-latest
+    environment: TESTING
+    timeout-minutes: 60
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Start Podman Socket
+        run: |
+          sudo systemctl start podman.socket
+          systemctl status podman.socket
+      - name: Podman build and tag
+        run: |
+          podman compose build
+      - name: Login to GitHub Container Registry
+        run: |
+          podman login -u ${{ github.repository_owner }} -p ${{ secrets.GITHUB_TOKEN }} ghcr.io
+      - name: push to registry
+        run: |
+          podman tag  ghcr.io/${{ github.repository_owner }}/grimoire:nightly ghcr.io/${{ github.repository_owner }}/grimoire:${{ github.sha }}
+          podman push ghcr.io/${{ github.repository_owner }}/grimoire:${{ github.sha }}
+          podman push ghcr.io/${{ github.repository_owner }}/grimoire:nightly
