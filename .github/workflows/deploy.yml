@@ -25,13 +25,9 @@ jobs:
           podman login -u ${{ github.repository_owner }} -p ${{ secrets.GITHUB_TOKEN }} ghcr.io
       - name: Podman build and tag
         run: |
-          podman compose -f docker-compose.yml build
-        env:
-          LISTENING_ADDRESS: ${{ secrets.LISTENING_ADDRESS }}
-          GRIMOIRE_POSTGRES_USER: ${{ secrets.GRIMOIRE_POSTGRES_USER }}
-          GRIMOIRE_POSTGRES_PASSWORD: ${{ secrets.GRIMOIRE_POSTGRES_PASSWORD }}
+          podman build -t ghcr.io/${{ github.repository_owner }}/grimoire:${{ github.sha }} .
       - name: push to registry
         run: |
-          podman tag  ghcr.io/${{ github.repository_owner }}/grimoire:nightly ghcr.io/${{ github.repository_owner }}/grimoire:${{ github.sha }}
+          podman tag ghcr.io/${{ github.repository_owner }}/grimoire:${{ github.sha }} ghcr.io/${{ github.repository_owner }}/grimoire:nightly
           podman push ghcr.io/${{ github.repository_owner }}/grimoire:${{ github.sha }}
           podman push ghcr.io/${{ github.repository_owner }}/grimoire:nightly
