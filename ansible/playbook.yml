@@ -1,0 +1,29 @@
+---
+- name: Deploy to testing
+  hosts: testing
+  become: true
+  tasks:
+    - name: Ensure Podman is installed
+      ansible.builtin.package:
+        name: podman
+        state: present
+
+    - name: Ensure Podman socket is started
+      ansible.builtin.systemd:
+        name: podman.socket
+        state: started
+
+    - name: Pull the latest image from the registry
+      community.general.podman_image:
+        name: ghcr.io/{{ lookup('env', 'GITHUB_REPOSITORY_OWNER') }}/grimoire:nightly
+        tag: nightly
+        pull: true
+
+    - name: Run the container
+      community.general.podman_container:
+        name: gstaldergeist
+        image: ghcr.io/{{ lookup('env', 'GITHUB_REPOSITORY_OWNER') }}/grimoire:nightly
+        state: started
+        restart_policy: unless-stopped
+        env:
+          ALL_SECRETS_JSON: "{{ lookup('file', '.env') }}"
