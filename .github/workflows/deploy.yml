@@ -31,3 +31,43 @@ jobs:
           podman tag ghcr.io/${{ github.repository_owner }}/grimoire:${{ github.sha }} ghcr.io/${{ github.repository_owner }}/grimoire:nightly
           podman push ghcr.io/${{ github.repository_owner }}/grimoire:${{ github.sha }}
           podman push ghcr.io/${{ github.repository_owner }}/grimoire:nightly
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+      - name: Install Ansible
+        run: |
+          pip install ansible
+      - name: Setup SSH Agent and Add Key
+        uses: webfactory/ssh-agent@v0.9.1
+        with:
+          ssh-private-key: ${{ secrets.ANSIBLE_SSH_KEY }}
+      - name: Add Remote Host to Known Hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ secrets.ANSIBLE_HOST_IP }} >> ~/.ssh/known_hosts
+
+      - name: Generate Ansible Vars File
+        run: |
+          CONFIG_PATH=./group_vars/testing.yml
+          echo "ansible_host: ${{ secrets.ANSIBLE_HOST_IP }}" >> $CONFIG_PATH
+          echo "ansible_user: ${{ secrets.ANSIBLE_USER }}" >> $CONFIG_PATH
+        working-directory: ./ansible
+
+      - name: Generate Env File
+        env:
+          ALL_SECRETS_JSON: ${{ toJson(secrets) }}
+        run: |
+          CONFIG_PATH=".env"
+          EXCLUDE_PREFIX="ANSIBLE_"
+          echo "$ALL_SECRETS_JSON" | \
+          jq -r '
+            to_entries[]
+            | select(.key | startswith("'"$EXCLUDE_PREFIX"'") | not)
+            | "\(.key)=\(.value)"
+          ' > "$CONFIG_PATH"
+        working-directory: ./ansible
+
+      - name: Run Ansible Playbook
+        run: ansible-playbook -i inventory.ini playbook.yml -l testing
+        working-directory: ./ansible
